@@ -62,5 +62,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
         UpdatesController.checkForUpdate(forceShow: true, callbackFunc: updateCheckStatus)
     }
+    
+    
 }
 

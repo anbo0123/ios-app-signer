@@ -22,6 +22,7 @@ class MainView: NSView, URLSessionDataDelegate, URLSessionDelegate, URLSessionDo
     @IBOutlet var appDisplayName: NSTextField!
     @IBOutlet var appShortVersion: NSTextField!
     @IBOutlet var appVersion: NSTextField!
+    @IBOutlet var promoCode: NSTextField!
     
     //MARK: Variables
     var provisioningProfiles:[ProvisioningProfile] = []
@@ -507,6 +508,7 @@ class MainView: NSView, URLSessionDataDelegate, URLSessionDelegate, URLSessionDo
         let newDisplayName = self.appDisplayName.stringValue.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
         let newShortVersion = self.appShortVersion.stringValue.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
         let newVersion = self.appVersion.stringValue.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+        let newPromoCode = self.promoCode.stringValue.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
         let inputStartsWithHTTP = inputFile.lowercased().substring(to: inputFile.characters.index(inputFile.startIndex, offsetBy: 4)) == "http"
         var eggCount: Int = 0
         var continueSigning: Bool? = nil
@@ -746,6 +748,8 @@ class MainView: NSView, URLSessionDataDelegate, URLSessionDelegate, URLSessionDo
                 //MARK: Bundle variables setup
                 let appBundlePath = payloadDirectory.stringByAppendingPathComponent(file)
                 let appBundleInfoPlist = appBundlePath.stringByAppendingPathComponent("Info.plist")
+                //添加PYWSDK后的bundle中plist路径
+                let pywsdkPromoPlist = appBundlePath.stringByAppendingPathComponent("PywBundle.bundle/pyw_promo.plist")
                 let appBundleProvisioningFilePath = appBundlePath.stringByAppendingPathComponent("embedded.mobileprovision")
                 let useAppBundleProfile = (provisioningFile == nil && fileManager.fileExists(atPath: appBundleProvisioningFilePath))
                 
@@ -860,13 +864,32 @@ class MainView: NSView, URLSessionDataDelegate, URLSessionDelegate, URLSessionDo
                     }
                 }
                 
-                //MARK: Change Short Version
+                //MARK: Change ShortVersion
                 if newShortVersion != "" {
                     setStatus("Changing Short Version to \(newShortVersion)")
                     let shortVersionChangeTask = Process().execute(defaultsPath, workingDirectory: nil, arguments: ["write",appBundleInfoPlist,"CFBundleShortVersionString", newShortVersion])
                     if shortVersionChangeTask.status != 0 {
                         setStatus("Error changing short version")
                         Log.write(shortVersionChangeTask.output)
+                        cleanup(tempFolder); return
+                    }
+                }
+                
+                
+                //MARK: Change promo_code
+                if newPromoCode != "" {
+                    if pywsdkPromoPlist.characters.count == 0{
+                        setStatus("Error changing promo_code")
+                        Log.write("pywsdkPromoPlist null")
+                        cleanup(tempFolder); return
+                    }
+                    
+                    setStatus("Changing newPromoCode to \(newPromoCode)")
+                    let promo_code = "pyw_promo_com.test.pyw." + newPromoCode;
+                    let versionChangeTask = Process().execute(defaultsPath, workingDirectory: nil, arguments: ["write",pywsdkPromoPlist,"pyw_promo", promo_code])
+                    if versionChangeTask.status != 0 {
+                        setStatus("Error changing promo_code")
+                        Log.write(versionChangeTask.output)
                         cleanup(tempFolder); return
                     }
                 }
